@@ -401,16 +401,21 @@ export default function SolucoesPage() {
                     Agende uma conversa gratuita com nossos especialistas e descubra como podemos ajudar seu negócio
                   </p>
                   <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                    <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                      Agendar uma Conversa
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button size="lg" variant="secondary" className="w-full sm:w-auto" asChild>
+                      <Link href="/contato">
+                        Agendar uma Conversa
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
                     </Button>
                     <Button
                       size="lg"
                       variant="outline"
                       className="w-full border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
+                      asChild
                     >
-                      Ligar Agora: (11) 4002-8922
+                      <a href="tel:1140028922">
+                        Ligar Agora: (11) 4002-8922
+                      </a>
                     </Button>
                   </div>
                 </div>

@@ -125,9 +125,11 @@ export default function GuiasPage() {
                             <span>Atualizado com a legislação mais recente</span>
                           </div>
                         </div>
-                        <Button size="lg" className="w-full sm:w-auto">
-                          <Download className="mr-2 h-4 w-4" />
-                          Baixar Guia Gratuito
+                        <Button size="lg" className="w-full sm:w-auto" asChild>
+                          <a href={featuredGuide.file_url || "#"} download target="_blank" rel="noopener noreferrer">
+                            <Download className="mr-2 h-4 w-4" />
+                            Baixar Guia Gratuito
+                          </a>
                         </Button>
                       </div>
                     </div>
@@ -208,9 +210,11 @@ export default function GuiasPage() {
                           <span>Download gratuito</span>
                         </div>
                       </div>
-                      <Button className="w-full" size="sm">
-                        <Download className="mr-2 h-3 w-3" />
-                        Baixar Guia
+                      <Button className="w-full" size="sm" asChild>
+                        <a href={guide.file_url || "#"} download target="_blank" rel="noopener noreferrer">
+                          <Download className="mr-2 h-3 w-3" />
+                          Baixar Guia
+                        </a>
                       </Button>
                     </CardContent>
                   </Card>

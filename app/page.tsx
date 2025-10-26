@@ -254,16 +254,19 @@ export default function HomePage() {
                     seu negócio.
                   </p>
                   <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                    <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                      Quero Meu Diagnóstico Gratuito
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button size="lg" variant="secondary" className="w-full sm:w-auto" asChild>
+                      <Link href="/contato">
+                        Quero Meu Diagnóstico Gratuito
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
                     </Button>
                     <Button
                       size="lg"
                       variant="outline"
                       className="w-full border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 sm:w-auto"
+                      asChild
                     >
-                      Conversar com um Especialista
+                      <Link href="/contato">Conversar com um Especialista</Link>
                     </Button>
                   </div>
                 </div>

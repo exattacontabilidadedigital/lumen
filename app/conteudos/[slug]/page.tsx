@@ -2,7 +2,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, ArrowLeft, Share2, BookmarkPlus } from "lucide-react"
+import { Calendar, Clock, ArrowLeft } from "lucide-react"
+import { ArticleActions } from "@/components/article-actions"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { createServerClient } from "@/lib/supabase/server"
@@ -90,15 +91,7 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
                   <Clock className="h-4 w-4" />
                   <span>{article.reading_time || "10"} min de leitura</span>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Compartilhar
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <BookmarkPlus className="h-4 w-4" />
-                  </Button>
-                </div>
+                <ArticleActions article={article} />
               </div>
 
               {article.image_url && (
