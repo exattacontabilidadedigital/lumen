@@ -32,8 +32,8 @@ CREATE POLICY "Admin pode visualizar tudo" ON public.contacts
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.admin_users
-      WHERE admin_users.id = auth.uid()
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
     )
   );
 
@@ -43,14 +43,14 @@ CREATE POLICY "Admin pode atualizar" ON public.contacts
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.admin_users
-      WHERE admin_users.id = auth.uid()
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.admin_users
-      WHERE admin_users.id = auth.uid()
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
     )
   );
 
@@ -60,8 +60,8 @@ CREATE POLICY "Admin pode deletar" ON public.contacts
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.admin_users
-      WHERE admin_users.id = auth.uid()
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
     )
   );
 

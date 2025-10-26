@@ -22,7 +22,12 @@ export default async function AdminContatosPage() {
   }
 
   // Verificar se é admin
-  const { data: adminUser } = await supabase.from("admin_users").select("*").eq("id", user.id).single()
+  const { data: adminUser } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .eq("role", "admin")
+    .single()
 
   if (!adminUser) {
     redirect("/")
