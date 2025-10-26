@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Video, BookOpen, LayoutDashboard, Users } from "lucide-react"
+import { FileText, Video, BookOpen, LayoutDashboard, Users, MessageSquare } from "lucide-react"
 
 const navItems = [
   {
@@ -30,6 +30,11 @@ const navItems = [
     title: "Inscrições",
     href: "/admin/inscricoes",
     icon: Users,
+  },
+  {
+    title: "Contatos",
+    href: "/admin/contatos",
+    icon: MessageSquare,
   },
 ]
 

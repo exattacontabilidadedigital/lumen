@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 export default function ContatoPage() {
   const [formData, setFormData] = useState({
@@ -18,12 +19,48 @@ export default function ContatoPage() {
     porte: "",
     mensagem: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Aqui você pode adicionar a lógica de envio do formulário
-    console.log("Formulário enviado:", formData)
-    alert("Obrigado pelo contato! Retornaremos em breve.")
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao enviar mensagem")
+      }
+
+      toast.success("Mensagem enviada com sucesso!", {
+        description: "Entraremos em contato em breve.",
+      })
+
+      // Limpar formulário
+      setFormData({
+        nome: "",
+        email: "",
+        telefone: "",
+        empresa: "",
+        porte: "",
+        mensagem: "",
+      })
+    } catch (error) {
+      console.error("Erro ao enviar formulário:", error)
+      toast.error("Erro ao enviar mensagem", {
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -170,9 +207,9 @@ export default function ContatoPage() {
                     />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full">
+                  <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                     <Send className="mr-2 h-5 w-5" />
-                    Enviar mensagem
+                    {isSubmitting ? "Enviando..." : "Enviar mensagem"}
                   </Button>
                 </form>
               </div>
