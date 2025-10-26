@@ -2,6 +2,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { DiagnosticoDialog } from "@/components/diagnostico-dialog"
 import { ArrowRight, CheckCircle2, TrendingUp, Shield, FileText, Lightbulb, Users, Award } from "lucide-react"
 import Link from "next/link"
 
@@ -254,12 +255,12 @@ export default function HomePage() {
                     seu negócio.
                   </p>
                   <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                    <Button size="lg" variant="secondary" className="w-full sm:w-auto" asChild>
-                      <Link href="/contato">
+                    <DiagnosticoDialog>
+                      <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                         Quero Meu Diagnóstico Gratuito
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
+                      </Button>
+                    </DiagnosticoDialog>
                     <Button
                       size="lg"
                       variant="outline"
