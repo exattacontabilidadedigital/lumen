@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Video, BookOpen, LogOut } from "lucide-react"
+import { FileText, Video, BookOpen, LogOut, MessageSquare } from "lucide-react"
 import Link from "next/link"
 
 export default async function AdminDashboard() {
@@ -28,6 +28,13 @@ export default async function AdminDashboard() {
 
   const { count: guidesCount } = await supabase.from("guides").select("*", { count: "exact", head: true })
 
+  const { count: contactsCount } = await supabase.from("contacts").select("*", { count: "exact", head: true })
+
+  const { count: newContactsCount } = await supabase
+    .from("contacts")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "novo")
+
   const { data: recentArticles } = await supabase
     .from("articles")
     .select("id, title, created_at, published")
@@ -52,7 +59,7 @@ export default async function AdminDashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Artigos</CardTitle>
@@ -85,6 +92,19 @@ export default async function AdminDashboard() {
               <p className="text-xs text-muted-foreground">Guias práticos disponíveis</p>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Contatos Recebidos</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{contactsCount || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {newContactsCount || 0} {newContactsCount === 1 ? "novo" : "novos"}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -110,6 +130,17 @@ export default async function AdminDashboard() {
                 <Button className="w-full justify-start bg-transparent" variant="outline">
                   <BookOpen className="mr-2 h-4 w-4" />
                   Gerenciar Guias
+                </Button>
+              </Link>
+              <Link href="/admin/contatos">
+                <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Ver Contatos
+                  {newContactsCount && newContactsCount > 0 ? (
+                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
+                      {newContactsCount}
+                    </span>
+                  ) : null}
                 </Button>
               </Link>
             </CardContent>
