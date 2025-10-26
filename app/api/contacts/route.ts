@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { nome, email, telefone, empresa, porte, mensagem } = body
+    const { nome, email, telefone, empresa, porte, mensagem, tipo = "contato" } = body
 
     // Validação básica
     if (!nome || !email || !telefone || !empresa || !porte || !mensagem) {
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
           empresa,
           porte,
           mensagem,
+          tipo,
           status: "novo",
         },
       ])

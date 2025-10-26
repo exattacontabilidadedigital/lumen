@@ -4,9 +4,8 @@ import { Header } from "@/components/header"
 import { AdminNav } from "@/components/admin-nav"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Mail, Phone, Building2, Calendar, MessageSquare, Download } from "lucide-react"
+import { ContactsTable } from "@/components/contacts-table"
+import { Download } from "lucide-react"
 import Link from "next/link"
 
 export default async function AdminContatosPage() {
@@ -49,31 +48,6 @@ export default async function AdminContatosPage() {
     novos: contacts?.filter((c) => c.status === "novo").length || 0,
     emAndamento: contacts?.filter((c) => c.status === "em_andamento").length || 0,
     respondidos: contacts?.filter((c) => c.status === "respondido").length || 0,
-  }
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-      novo: { variant: "default", label: "Novo" },
-      em_andamento: { variant: "secondary", label: "Em Andamento" },
-      respondido: { variant: "outline", label: "Respondido" },
-      arquivado: { variant: "destructive", label: "Arquivado" },
-    }
-    const config = variants[status] || { variant: "outline", label: status }
-    return (
-      <Badge variant={config.variant} className="capitalize">
-        {config.label}
-      </Badge>
-    )
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
   }
 
   return (
@@ -137,74 +111,7 @@ export default async function AdminContatosPage() {
             <CardTitle>Lista de Contatos</CardTitle>
           </CardHeader>
           <CardContent>
-            {!contacts || contacts.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                <p>Nenhum contato recebido ainda.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Porte</TableHead>
-                      <TableHead>Mensagem</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contacts.map((contact) => (
-                      <TableRow key={contact.id}>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            {formatDate(contact.created_at)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{contact.nome}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                            {contact.empresa}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3 w-3 text-muted-foreground" />
-                              <a href={`mailto:${contact.email}`} className="text-accent hover:underline">
-                                {contact.email}
-                              </a>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              <a href={`tel:${contact.telefone}`} className="text-accent hover:underline">
-                                {contact.telefone}
-                              </a>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {contact.porte}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-xs">
-                          <div className="line-clamp-2 text-sm text-muted-foreground">{contact.mensagem}</div>
-                        </TableCell>
-                        <TableCell>{getStatusBadge(contact.status)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <ContactsTable contacts={contacts || []} />
           </CardContent>
         </Card>
       </div>

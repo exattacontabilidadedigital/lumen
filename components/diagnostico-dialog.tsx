@@ -51,6 +51,7 @@ export function DiagnosticoDialog({ children }: { children: React.ReactNode }) {
           empresa: formData.empresa,
           porte: formData.porte,
           mensagem: mensagem,
+          tipo: "diagnostico",
         }),
       })
 
