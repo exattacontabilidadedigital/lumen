@@ -16,9 +16,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 
 export function DiagnosticoDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -29,21 +31,59 @@ export function DiagnosticoDialog({ children }: { children: React.ReactNode }) {
     desafio: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Dados do diagnóstico:", formData)
-    // Aqui você pode adicionar a lógica para enviar os dados
-    alert("Obrigado! Entraremos em contato em breve para dar continuidade ao seu diagnóstico.")
-    setOpen(false)
-    setFormData({
-      nome: "",
-      email: "",
-      telefone: "",
-      empresa: "",
-      porte: "",
-      regimeTributario: "",
-      desafio: "",
-    })
+    setIsSubmitting(true)
+
+    try {
+      // Preparar dados para enviar (incluir regime tributário na mensagem)
+      const mensagem = `DIAGNÓSTICO TRIBUTÁRIO GRATUITO\n\nRegime Tributário: ${formData.regimeTributario}\n\nDesafio Principal:\n${formData.desafio}`
+
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nome: formData.nome,
+          email: formData.email,
+          telefone: formData.telefone,
+          empresa: formData.empresa,
+          porte: formData.porte,
+          mensagem: mensagem,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao enviar diagnóstico")
+      }
+
+      toast.success("Diagnóstico solicitado com sucesso!", {
+        description: "Nossa equipe entrará em contato em breve para realizar seu diagnóstico completo.",
+        duration: 5000,
+      })
+
+      // Limpar formulário e fechar modal
+      setFormData({
+        nome: "",
+        email: "",
+        telefone: "",
+        empresa: "",
+        porte: "",
+        regimeTributario: "",
+        desafio: "",
+      })
+      setOpen(false)
+    } catch (error) {
+      console.error("Erro ao enviar diagnóstico:", error)
+      toast.error("Erro ao solicitar diagnóstico", {
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -154,8 +194,8 @@ export function DiagnosticoDialog({ children }: { children: React.ReactNode }) {
             />
           </div>
 
-          <Button type="submit" className="w-full">
-            Solicitar Diagnóstico Gratuito
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Enviando..." : "Solicitar Diagnóstico Gratuito"}
           </Button>
         </form>
       </DialogContent>

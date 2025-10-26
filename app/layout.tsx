@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "sonner"
 import "./globals.css"
 import { AIChatWidget } from "@/components/ai-chat-widget"
 
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.className} font-sans antialiased`}>
         {children}
         <AIChatWidget />
+        <Toaster position="top-right" richColors closeButton />
         <Analytics />
       </body>
     </html>
