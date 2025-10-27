@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from "@/lib/supabase/client"
-import { Eye, Save, Upload, X, Plus } from "lucide-react"
+import { Eye, Save, Upload, X, Plus, Loader2, ImageIcon } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SocialPreview } from "@/components/social-preview"
 import { RichTextEditor } from "@/components/rich-text-editor"
+import { RelatedArticlesSelector } from "@/components/related-articles-selector"
+import { useToast } from "@/hooks/use-toast"
 
 interface Article {
   id: string
@@ -39,6 +41,7 @@ interface Article {
   twitter_description: string | null
   twitter_image: string | null
   twitter_card_type: string | null
+  related_articles: string[] | null
 }
 
 interface ArticleFormProps {
@@ -47,8 +50,12 @@ interface ArticleFormProps {
 
 export function ArticleForm({ article }: ArticleFormProps) {
   const router = useRouter()
+  const supabase = createClient()
+  const { toast } = useToast()
+  const featuredImageInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [uploadingFeaturedImage, setUploadingFeaturedImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tagInput, setTagInput] = useState("")
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
@@ -74,7 +81,76 @@ export function ArticleForm({ article }: ArticleFormProps) {
     twitter_description: article?.twitter_description || "",
     twitter_image: article?.twitter_image || "",
     twitter_card_type: article?.twitter_card_type || "summary_large_image",
+    related_articles: article?.related_articles || [],
   })
+
+  // Função para fazer upload da imagem de destaque
+  const uploadFeaturedImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingFeaturedImage(true)
+      
+      // Gerar nome único para o arquivo
+      const fileExt = file.name.split('.').pop()
+      const fileName = `featured-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `articles/${fileName}`
+
+      // Upload para o Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('article-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('Erro no upload:', error)
+        toast({
+          title: "Erro no upload",
+          description: error.message,
+          variant: "destructive",
+        })
+        return null
+      }
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('article-images')
+        .getPublicUrl(data.path)
+
+      toast({
+        title: "Upload concluído!",
+        description: "Imagem de destaque enviada com sucesso.",
+      })
+
+      return publicUrl
+    } catch (error) {
+      console.error('Erro no upload:', error)
+      toast({
+        title: "Erro no upload",
+        description: "Ocorreu um erro ao enviar a imagem.",
+        variant: "destructive",
+      })
+      return null
+    } finally {
+      setUploadingFeaturedImage(false)
+    }
+  }
+
+  // Handler para o input de arquivo
+  const handleFeaturedImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const uploadedUrl = await uploadFeaturedImage(file)
+    if (uploadedUrl) {
+      setFormData({ ...formData, image_url: uploadedUrl })
+    }
+
+    // Limpar o input para permitir upload do mesmo arquivo novamente
+    if (featuredImageInputRef.current) {
+      featuredImageInputRef.current.value = ''
+    }
+  }
 
   useEffect(() => {
     if (!article) return
@@ -112,7 +188,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
         slug,
         status: "draft",
         updated_at: new Date().toISOString(),
+        // Garantir que related_articles seja sempre um array válido
+        related_articles: formData.related_articles || [],
       }
+
+      console.log("Salvando draft com featured_image_alt:", draftData.featured_image_alt)
 
       if (article) {
         const { error } = await supabase.from("articles").update(draftData).eq("id", article.id)
@@ -177,7 +257,11 @@ export function ArticleForm({ article }: ArticleFormProps) {
         published: true,
         publish_date: formData.publish_date || new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        // Garantir que related_articles seja sempre um array válido
+        related_articles: formData.related_articles || [],
       }
+
+      console.log("Publicando artigo com featured_image_alt:", articleData.featured_image_alt)
 
       if (article) {
         const { error } = await supabase.from("articles").update(articleData).eq("id", article.id)
@@ -321,16 +405,41 @@ export function ArticleForm({ article }: ArticleFormProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="image_url">URL da Imagem de Destaque</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="image_url"
-                        value={formData.image_url}
-                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                        placeholder="/placeholder.svg?height=400&width=800"
-                      />
-                      <Button type="button" variant="outline" size="icon" className="shrink-0 bg-transparent">
-                        <Upload className="h-4 w-4" />
-                      </Button>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          id="image_url"
+                          value={formData.image_url}
+                          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                          placeholder="Cole uma URL ou use o botão para fazer upload"
+                        />
+                        <input
+                          ref={featuredImageInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          onChange={handleFeaturedImageUpload}
+                          disabled={uploadingFeaturedImage}
+                          className="sr-only"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="shrink-0"
+                          onClick={() => featuredImageInputRef.current?.click()}
+                          disabled={uploadingFeaturedImage}
+                          title="Fazer upload de imagem"
+                        >
+                          {uploadingFeaturedImage ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        📷 Clique no botão de upload para selecionar uma imagem do seu computador
+                      </p>
                     </div>
                     {formData.image_url && (
                       <div className="mt-2 rounded-lg overflow-hidden border bg-muted">
@@ -558,6 +667,14 @@ export function ArticleForm({ article }: ArticleFormProps) {
                       onChange={(e) => setFormData({ ...formData, publish_date: e.target.value })}
                     />
                     <p className="text-xs text-muted-foreground">Deixe em branco para publicar imediatamente</p>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <RelatedArticlesSelector
+                      currentArticleId={article?.id}
+                      selectedArticles={formData.related_articles}
+                      onSelectionChange={(selected) => setFormData({ ...formData, related_articles: selected })}
+                    />
                   </div>
                 </TabsContent>
               </Tabs>

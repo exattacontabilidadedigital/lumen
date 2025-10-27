@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -25,8 +26,14 @@ interface ContactsTableProps {
 }
 
 export function ContactsTable({ contacts }: ContactsTableProps) {
+  const router = useRouter()
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const handleStatusChange = () => {
+    // Recarregar a página para atualizar a lista
+    router.refresh()
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -39,15 +46,18 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+    const variants: Record<
+      string,
+      { variant: "default" | "secondary" | "destructive" | "outline"; label: string; className?: string }
+    > = {
       novo: { variant: "default", label: "Novo" },
       em_andamento: { variant: "secondary", label: "Em Andamento" },
-      respondido: { variant: "outline", label: "Respondido" },
+      respondido: { variant: "outline", label: "Respondido", className: "border-green-600 text-green-700 bg-green-50" },
       arquivado: { variant: "destructive", label: "Arquivado" },
     }
     const config = variants[status] || { variant: "outline", label: status }
     return (
-      <Badge variant={config.variant} className="capitalize">
+      <Badge variant={config.variant} className={`capitalize ${config.className || ""}`}>
         {config.label}
       </Badge>
     )
@@ -135,7 +145,12 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
                 </TableCell>
                 <TableCell>{getStatusBadge(contact.status)}</TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" onClick={() => handleViewDetails(contact)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewDetails(contact)}
+                    className="border-blue-900 text-blue-900 hover:bg-blue-900 hover:text-white"
+                  >
                     <Eye className="mr-2 h-4 w-4" />
                     Ver Detalhes
                   </Button>
@@ -146,7 +161,12 @@ export function ContactsTable({ contacts }: ContactsTableProps) {
         </Table>
       </div>
 
-      <ContactDetailsModal contact={selectedContact} open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <ContactDetailsModal
+        contact={selectedContact}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onStatusChange={handleStatusChange}
+      />
     </>
   )
 }

@@ -1,8 +1,11 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Phone, Building2, Calendar, FileText, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Mail, Phone, Building2, Calendar, FileText, Users, CheckCircle2, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface Contact {
   id: string
@@ -21,9 +24,85 @@ interface ContactDetailsModalProps {
   contact: Contact | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onStatusChange?: () => void
 }
 
-export function ContactDetailsModal({ contact, open, onOpenChange }: ContactDetailsModalProps) {
+export function ContactDetailsModal({ contact, open, onOpenChange, onStatusChange }: ContactDetailsModalProps) {
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState(contact?.status || "novo")
+
+  // Atualizar status quando o contato mudar
+  useEffect(() => {
+    if (contact) {
+      setCurrentStatus(contact.status)
+    }
+  }, [contact])
+
+  // Atualizar status para "em_andamento" quando abrir o modal
+  useEffect(() => {
+    const updateStatusToInProgress = async () => {
+      if (open && contact && contact.status === "novo") {
+        try {
+          const response = await fetch(`/api/contacts/${contact.id}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status: "em_andamento" }),
+          })
+
+          if (response.ok) {
+            setCurrentStatus("em_andamento")
+            if (onStatusChange) {
+              onStatusChange()
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao atualizar status:", error)
+        }
+      }
+    }
+
+    updateStatusToInProgress()
+  }, [open, contact, onStatusChange])
+
+  const handleMarkAsResponded = async () => {
+    if (!contact) return
+
+    setIsUpdating(true)
+    try {
+      const response = await fetch(`/api/contacts/${contact.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "respondido" }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao atualizar status")
+      }
+
+      setCurrentStatus("respondido")
+      toast.success("Contato marcado como respondido!", {
+        description: "O status foi atualizado com sucesso.",
+      })
+
+      if (onStatusChange) {
+        onStatusChange()
+      }
+    } catch (error) {
+      console.error("Erro ao marcar como respondido:", error)
+      toast.error("Erro ao atualizar status", {
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   if (!contact) return null
 
   const formatDate = (dateString: string) => {
@@ -37,15 +116,18 @@ export function ContactDetailsModal({ contact, open, onOpenChange }: ContactDeta
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
+    const variants: Record<
+      string,
+      { variant: "default" | "secondary" | "destructive" | "outline"; label: string; className?: string }
+    > = {
       novo: { variant: "default", label: "Novo" },
       em_andamento: { variant: "secondary", label: "Em Andamento" },
-      respondido: { variant: "outline", label: "Respondido" },
+      respondido: { variant: "outline", label: "Respondido", className: "border-green-600 text-green-700 bg-green-50" },
       arquivado: { variant: "destructive", label: "Arquivado" },
     }
     const config = variants[status] || { variant: "outline", label: status }
     return (
-      <Badge variant={config.variant} className="capitalize">
+      <Badge variant={config.variant} className={`capitalize ${config.className || ""}`}>
         {config.label}
       </Badge>
     )
@@ -83,12 +165,10 @@ export function ContactDetailsModal({ contact, open, onOpenChange }: ContactDeta
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl">Detalhes do Contato</DialogTitle>
-            <div className="flex gap-2">
-              {getTipoBadge(contact.tipo)}
-              {getStatusBadge(contact.status)}
-            </div>
+          <DialogTitle className="text-2xl mb-4">Detalhes do Contato</DialogTitle>
+          <div className="flex gap-2 pb-4">
+            {getTipoBadge(contact.tipo)}
+            {getStatusBadge(currentStatus)}
           </div>
         </DialogHeader>
 
@@ -184,6 +264,29 @@ export function ContactDetailsModal({ contact, open, onOpenChange }: ContactDeta
             <span>Recebido em {formatDate(contact.created_at)}</span>
           </div>
         </div>
+
+        {/* Footer com botão de ação */}
+        {currentStatus !== "respondido" && (
+          <DialogFooter className="mt-6">
+            <Button
+              onClick={handleMarkAsResponded}
+              disabled={isUpdating}
+              className="w-full bg-blue-900 hover:bg-blue-800 text-white sm:w-auto"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Atualizando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Marcar como Respondido
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

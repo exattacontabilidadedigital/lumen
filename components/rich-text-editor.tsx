@@ -6,6 +6,8 @@ import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Link from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
+import TextAlign from "@tiptap/extension-text-align"
+import { Figure } from "@/lib/tiptap-extensions/figure"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,9 +27,18 @@ import {
   ImageIcon,
   Minus,
   Code2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Upload,
+  Loader2,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface RichTextEditorProps {
   content: string
@@ -40,6 +51,11 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState("")
   const [imageUrl, setImageUrl] = useState("")
   const [imageAlt, setImageAlt] = useState("")
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const { toast } = useToast()
+  const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -57,14 +73,19 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
       }),
       Image.configure({
         HTMLAttributes: {
-          class: "rounded-lg max-w-full h-auto",
+          class: "rounded-lg max-w-full h-auto mx-auto block",
         },
+      }),
+      Figure,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right', 'justify'],
       }),
     ],
     content,
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[400px] px-4 py-3",
+        class: "prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[400px] px-4 py-3 [&_img]:mx-auto [&_img]:block [&_img]:max-w-full [&_figure]:my-8 [&_figure]:text-center [&_figcaption]:mt-2 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-muted-foreground [&_figcaption]:italic",
       },
     },
     onUpdate: ({ editor }) => {
@@ -84,11 +105,82 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
     }
   }
 
-  const addImage = () => {
-    if (imageUrl) {
-      editor.chain().focus().setImage({ src: imageUrl, alt: imageAlt }).run()
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true)
+      
+      // Gerar nome único para o arquivo
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `articles/${fileName}`
+
+      // Upload para o Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('article-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) {
+        console.error('Erro no upload:', error)
+        toast({
+          title: "Erro no upload",
+          description: error.message,
+          variant: "destructive",
+        })
+        return null
+      }
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('article-images')
+        .getPublicUrl(data.path)
+
+      toast({
+        title: "Upload concluído!",
+        description: "Imagem enviada com sucesso.",
+      })
+
+      return publicUrl
+    } catch (error) {
+      console.error('Erro no upload:', error)
+      toast({
+        title: "Erro no upload",
+        description: "Ocorreu um erro ao enviar a imagem.",
+        variant: "destructive",
+      })
+      return null
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const addImage = async () => {
+    let finalImageUrl = imageUrl
+
+    // Se tem arquivo selecionado, fazer upload primeiro
+    if (imageFile) {
+      const uploadedUrl = await uploadImageToSupabase(imageFile)
+      if (!uploadedUrl) {
+        return // Upload falhou
+      }
+      finalImageUrl = uploadedUrl
+    }
+
+    if (finalImageUrl) {
+      // Se tem legenda, usa a extensão Figure customizada
+      if (imageAlt) {
+        console.log("Inserindo imagem COM legenda:", imageAlt)
+        editor.chain().focus().setFigure({ src: finalImageUrl, alt: imageAlt, caption: imageAlt }).run()
+      } else {
+        console.log("Inserindo imagem SEM legenda")
+        // Sem legenda, apenas imagem centralizada
+        editor.chain().focus().setImage({ src: finalImageUrl, alt: "" }).run()
+      }
       setImageUrl("")
       setImageAlt("")
+      setImageFile(null)
       setImageDialogOpen(false)
     }
   }
@@ -173,6 +265,37 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 
         <div className="flex gap-1 border-r pr-2">
           <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('left').run()}
+            active={editor.isActive({ textAlign: 'left' })}
+            title="Alinhar à esquerda"
+          >
+            <AlignLeft className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('center').run()}
+            active={editor.isActive({ textAlign: 'center' })}
+            title="Centralizar"
+          >
+            <AlignCenter className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('right').run()}
+            active={editor.isActive({ textAlign: 'right' })}
+            title="Alinhar à direita"
+          >
+            <AlignRight className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            active={editor.isActive({ textAlign: 'justify' })}
+            title="Justificar"
+          >
+            <AlignJustify className="h-4 w-4" />
+          </ToolbarButton>
+        </div>
+
+        <div className="flex gap-1 border-r pr-2">
+          <ToolbarButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             active={editor.isActive("bulletList")}
             title="Lista com marcadores"
@@ -206,9 +329,17 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
           <ToolbarButton onClick={() => setLinkDialogOpen(true)} title="Inserir link">
             <Link2 className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => setImageDialogOpen(true)} title="Inserir imagem">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setImageDialogOpen(true)}
+            title="Inserir imagem"
+            className="h-8 px-2 gap-1"
+          >
             <ImageIcon className="h-4 w-4" />
-          </ToolbarButton>
+            <span className="text-xs font-medium">Imagem</span>
+          </Button>
           <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Linha horizontal">
             <Minus className="h-4 w-4" />
           </ToolbarButton>
@@ -269,35 +400,149 @@ export function RichTextEditor({ content, onChange }: RichTextEditorProps) {
 
       {/* Image Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Inserir Imagem</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="image-url">URL da Imagem</Label>
-              <Input
-                id="image-url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="image-alt">Texto Alternativo (Alt)</Label>
-              <Input
-                id="image-alt"
-                value={imageAlt}
-                onChange={(e) => setImageAlt(e.target.value)}
-                placeholder="Descrição da imagem"
-              />
-            </div>
-          </div>
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </TabsTrigger>
+              <TabsTrigger value="url">
+                <Link2 className="h-4 w-4 mr-2" />
+                URL
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upload" className="space-y-4 py-4">
+              <div className="space-y-3">
+                <Label htmlFor="image-file">Selecionar Imagem do Computador</Label>
+                <div className="flex flex-col gap-3">
+                  <div className="relative">
+                    {/* Usar input nativo para garantir que o seletor de arquivos abra corretamente */}
+                    <input
+                      id="image-file"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setImageFile(file)
+                          setImageUrl("") // Limpar URL se arquivo foi selecionado
+                        }
+                      }}
+                      disabled={uploading}
+                      className="sr-only"
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Escolher arquivo
+                      </button>
+
+                      <span className="text-sm text-muted-foreground">ou arraste e solte aqui</span>
+                    </div>
+                  </div>
+                  {imageFile && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <Upload className="h-4 w-4 text-green-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-900">
+                          Arquivo selecionado
+                        </p>
+                        <p className="text-xs text-green-700">
+                          {imageFile.name} ({(imageFile.size / 1024).toFixed(2)} KB)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Formatos aceitos: JPG, PNG, WebP, GIF • Tamanho máximo: 10 MB
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image-alt-upload">Texto Alternativo / Legenda (Opcional)</Label>
+                <Input
+                  id="image-alt-upload"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  placeholder="Ex: Gráfico mostrando impacto da reforma tributária"
+                  disabled={uploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  📝 Será exibido como legenda abaixo da imagem e ajuda na acessibilidade
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="url" className="space-y-4 py-4">
+              <div className="space-y-3">
+                <Label htmlFor="image-url">URL da Imagem</Label>
+                <Input
+                  id="image-url"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value)
+                    setImageFile(null) // Limpar arquivo se URL foi preenchida
+                  }}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  disabled={uploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cole o link completo de uma imagem já hospedada na internet
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="image-alt-url">Texto Alternativo / Legenda (Opcional)</Label>
+                <Input
+                  id="image-alt-url"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  placeholder="Ex: Gráfico mostrando impacto da reforma tributária"
+                  disabled={uploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  📝 Será exibido como legenda abaixo da imagem e ajuda na acessibilidade
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImageDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setImageDialogOpen(false)
+                setImageFile(null)
+                setImageUrl("")
+                setImageAlt("")
+              }}
+              disabled={uploading}
+            >
               Cancelar
             </Button>
-            <Button onClick={addImage}>Inserir Imagem</Button>
+            <Button 
+              onClick={addImage}
+              disabled={uploading || (!imageFile && !imageUrl)}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Inserir Imagem"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

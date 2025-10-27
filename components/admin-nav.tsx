@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Video, BookOpen, LayoutDashboard, Users, MessageSquare } from "lucide-react"
+import { FileText, Video, BookOpen, LayoutDashboard, Users, MessageSquare, BarChart3, MessageCircle } from "lucide-react"
 
 const navItems = [
   {
@@ -15,6 +15,16 @@ const navItems = [
     title: "Artigos",
     href: "/admin/articles",
     icon: FileText,
+  },
+  {
+    title: "Comentários",
+    href: "/admin/comments",
+    icon: MessageCircle,
+  },
+  {
+    title: "Estatísticas",
+    href: "/admin/stats",
+    icon: BarChart3,
   },
   {
     title: "Webinars",
