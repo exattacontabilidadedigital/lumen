@@ -30,7 +30,7 @@ export default async function NewArticlePage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Criar Novo Artigo</h1>
         <ArticleForm />
       </main>
